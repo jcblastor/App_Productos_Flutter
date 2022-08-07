@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:productos_app/services/services.dart';
 import 'package:productos_app/widgets/widgets.dart';
@@ -64,7 +65,18 @@ class _ProductScreenBody extends StatelessWidget {
                   top: 30,
                   right: 35,
                   child: IconButton(
-                    onPressed: () {},
+                    onPressed: () async {
+                      final picker = ImagePicker();
+                      final XFile? pickedFile = await picker.pickImage(
+                        source: ImageSource.camera,
+                        imageQuality: 100,
+                      );
+                      if (pickedFile == null) {
+                        print('No selecciono nada');
+                      }
+
+                      productService.updateSelectedProductImage(pickedFile!.path);
+                    },
                     icon: const Icon(
                       Icons.camera_alt_outlined,
                       size: 40,
@@ -82,11 +94,21 @@ class _ProductScreenBody extends StatelessWidget {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
       floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.save_outlined),
-        onPressed: () async {
-          if (!productForm.isValidForm()) return;
-          await productService.saveOrCreateProduct(productForm.product);
-        },
+        onPressed: productService.isSaving
+            ? null
+            : () async {
+                if (!productForm.isValidForm()) return;
+
+                final String? imageUrl = await productService.uploadImage();
+                if (imageUrl != null) productForm.product.picture = imageUrl;
+
+                await productService.saveOrCreateProduct(productForm.product);
+              },
+        child: productService.isSaving
+            ? const CircularProgressIndicator(
+                color: Colors.white,
+              )
+            : const Icon(Icons.save_outlined),
       ),
     );
   }
@@ -126,9 +148,7 @@ class _ProductForm extends StatelessWidget {
             const SizedBox(height: 10),
             TextFormField(
               initialValue: '${product.price}',
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,2}'))
-              ],
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,2}'))],
               onChanged: (value) {
                 if (double.tryParse(value) == null) {
                   product.price = 0;
