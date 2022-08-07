@@ -1,18 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'package:productos_app/screens/screens.dart';
+import 'package:productos_app/services/services.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final productsService = Provider.of<ProductsService>(context);
+
+    if (productsService.isLoading) return const LoadingScreen();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Productos')),
       body: ListView.builder(
-        itemCount: 10,
+        itemCount: productsService.products.length,
         itemBuilder: (context, int i) => GestureDetector(
-          onTap: () => Navigator.pushNamed(context, 'product'),
-          child: const ProductCard(),
+          onTap: () {
+            productsService.selectedProduct =
+                productsService.products[i].copy();
+            Navigator.pushNamed(context, 'product');
+          },
+          child: ProductCard(
+            product: productsService.products[i],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
